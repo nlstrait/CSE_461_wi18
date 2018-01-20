@@ -64,12 +64,12 @@ def main():
 
 	payload = disassemble_packet(data)
 	num = struct.unpack('>I', payload[0:4])[0]
-	len = struct.unpack('>I', payload[4:8])[0]
+	length = struct.unpack('>I', payload[4:8])[0]
 	udp_port = struct.unpack('>I', payload[8:12])[0]
 	secret_a = struct.unpack('>I', payload[12:16])[0]
 
 	print '       num :', num
-	print '       len :', len
+	print '       len :', length
 	print '  udp_port :', udp_port
 	print '  secret_a :', secret_a
 	print '--- stage A complete ---\n'
@@ -83,8 +83,9 @@ def main():
 
 	for i in range(0, num):
 
-		payload = struct.pack('>I', i) + len * struct.pack('>I', 0)
+		payload = struct.pack('>I', i) + length * struct.pack('>I', 0)
 		packet = generate_packet(payload, secret_a, step=1)
+		print len(packet)
 
 		# start thread that waits for message from server
 		data = None

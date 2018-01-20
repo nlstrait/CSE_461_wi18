@@ -28,8 +28,6 @@ def verify_header(message, length, psecret, step, sid):
     if student_id != sid:
         return False
 
-    print 'header verified'
-
     return True
 
 
@@ -52,9 +50,9 @@ def receive_from_stream(sock, num_bytes):
 
     while len(received) < num_bytes:
         buf = sock.recv(num_bytes - len(received))
-        received.extend(packet)
+        received.extend(buf)
 
-    return packet
+    return received
 
 # this handles a single client
 def handle_thread(sock, message, address):
@@ -62,7 +60,7 @@ def handle_thread(sock, message, address):
     =============== STAGE A ================
     '''
     # drop connection if header is malformed
-    if not verify_header(message, 13, 0, 1, 361):
+    if not verify_header(message, 12, 0, 1, 361):
         return
 
     payload_len, secret, step_num = parse_header(message)
@@ -70,7 +68,7 @@ def handle_thread(sock, message, address):
 
     payload = message[12:]
 
-    if payload[:payload_len].decode("utf-8") != 'hello, world\0': # python strings aren't null-terminated, but they are in our protocol
+    if payload[:payload_len].decode("utf-8") != 'hello world\0': # python strings aren't null-terminated, but they are in our protocol
         return
 
     print 'payload checked'
@@ -93,6 +91,7 @@ def handle_thread(sock, message, address):
     stage_b_socket.bind(('', udp_port))
 
     num_acked = 0 # the number of packets acked so far
+    addr_b = None
     while num_acked != num:
         packet_b, addr_b = stage_b_socket.recvfrom(4096)
 
@@ -121,23 +120,26 @@ def handle_thread(sock, message, address):
         outgoing_packet = generate_header(4, secret_a, 1, 361)
         outgoing_packet.extend(pack('!I', num_acked))
         stage_b_socket.sendto(outgoing_packet, addr_b)
+        print 'packet ', num_acked, ' acked'
         num_acked += 1
 
+    print 'past loop'
     # got all the packets, now for step b2
     tcp_port = random.randint(49152, 65535) # stick to the dynamic ports
     secret_b = random.randint(1,1000)
 
     outgoing_packet = generate_header(8, secret_a, 2, 361)
     outgoing_packet.extend(pack('!II', tcp_port, secret_b))
-    stage_b_socket.sendto(outgoing_packet, address)
+    stage_b_socket.sendto(outgoing_packet, addr_b)
 
     '''
     =============== STAGE C ================
     '''
     tcp_socket = socket(AF_INET, SOCK_STREAM)
-    tcp_socket.bind('', tcp_port)
+    tcp_socket.bind(('', tcp_port))
     tcp_socket.listen(1)
     stage_c_socket, addr_c = tcp_socket.accept()
+    print 'stage c connection established'
 
     num2 = random.randint(1,20)
     length2 = random.randint(1,20)
@@ -163,15 +165,19 @@ def handle_thread(sock, message, address):
         # get new packet and check header values
         packet_d = receive_from_stream(stage_c_socket, len_to_recv)
         if not verify_header(packet_d, length2, secret_c, 1, 361):
+            print 'header failed'
             return
 
         # check payload contents
-        payload_len, secret, step_num = parse_header(packed_d)
+        payload_len, secret, step_num = parse_header(packet_d)
         payload = packet_d[12:]
         for byte in payload[:payload_len]:
-            if byte != char_c:
+            if chr(byte) != char_c:
+                print 'payload failed: expected ', char_c, ' got ', chr(byte)
                 return
 
+
+    print 'past loop'
     # send final packet with secret D
     secret_d = random.randint(1,1000)
     outgoing_packet = generate_header(4, secret_c, 2, 361)
@@ -181,6 +187,8 @@ def handle_thread(sock, message, address):
     '''
     =============== DONE ================
     '''
+
+
 
 
     stage_b_socket.close()
