@@ -1,43 +1,44 @@
 import socket
-import binascii
+import struct
 
 
-def generate_packet(payload, p_secret, step):
-
-	payload_len = len(payload)
-	msg = payload_len.to_bytes(4, byteorder='big')
-	msg += p_secret.to_bytes(4, byteorder='big')
-	msg += step.to_bytes(2, byteorder='big')
-
-	student_num = 982
-	msg += student_num.to_bytes(2, byteorder='big')
-
-	#msg += payload.encode()
-
-	#if payload_len % 4 != 0:
-#		to_add = 4 - payload_len % 4
-#		msg += bytes(to_add)
-#		print("added", to_add)
-
-	return msg
-
-
-#IP = '0.0.0.0'
 IP = '128.208.1.138'  # attu2.cs.washington.edu
 #IP = '128.208.1.139'  # attu3.cs.washington.edu
 PORT = 12235
 MESSAGE = "hello world"
 
-msg_bytes = generate_packet(MESSAGE, p_secret=0, step=1)
 
-print(len(msg_bytes))
-print(msg_bytes)
+def generate_packet(payload, p_secret, step):
+	payload += '\0'
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.sendto(msg_bytes, (IP, PORT))
-print('sent msg')
+	packet = bytearray()
 
-#data, server = sock.recvfrom(1024)
-#print(data)
-#print(server)
+	# '>' indicates big-endian
+	# 'I' indicates 4-byte unsigned int
+	# 'H' indicates 2-byte unsigned int
+	packet.extend(struct.pack('>I', len(payload)))
+	packet.extend(struct.pack('>I', p_secret))
+	packet.extend(struct.pack('>H', step))
+	packet.extend(struct.pack('>H', 982))
+	packet.extend(bytearray(payload))
+
+	padding = '\0' * ((4 - len(payload)) % 4)
+	packet.extend(bytearray(padding))
+
+	return packet
+
+
+def main():
+	packet = generate_packet(MESSAGE, p_secret=0, step=1)
+
+	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	sock.sendto(packet, (IP, PORT))
+	print 'message sent'
+
+	data, server = sock.recvfrom(4096)
+	print(data)
+
+
+if __name__ == '__main__':
+	main()
 
