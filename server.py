@@ -84,109 +84,123 @@ def handle_thread(sock, message, address):
     sock.sendto(outgoing_packet, address)
 
 
-    '''
-    =============== STAGE B ================
-    '''
-    stage_b_socket = socket(AF_INET, SOCK_DGRAM)
-    stage_b_socket.bind(('', udp_port))
+    # declare these up here so we can clean them up in case of a timeout exception
+    stage_b_socket = socket()
+    tcp_socket = socket()
+    stage_c_socket = socket()
 
-    num_acked = 0 # the number of packets acked so far
-    addr_b = None
-    while num_acked != num:
-        packet_b, addr_b = stage_b_socket.recvfrom(4096)
+    try:
 
-        # drop if packet is malformed
-        if not verify_header(packet_b, length + 4, secret_a, 1, 361):
-            return
+        '''
+        =============== STAGE B ================
+        '''
+        stage_b_socket = socket(AF_INET, SOCK_DGRAM)
+        stage_b_socket.bind(('', udp_port))
+        stage_b_socket.settimeout(3)
 
-        payload_len, secret, step_num = parse_header(packet_b)
+        num_acked = 0 # the number of packets acked so far
+        addr_b = None
+        while num_acked != num:
+            packet_b, addr_b = stage_b_socket.recvfrom(4096)
 
-
-        payload = packet_b[12:]
-        packet_id = unpack('!I', payload[0:4])[0]
-        if packet_id != num_acked: # packets must be received in order; wait for the next packet
-            continue
-
-
-
-        for byte in payload[4:length]:
-            if byte != '\0': # packet payload must be all zero bytes; if not, drop connection
+            # drop if packet is malformed
+            if not verify_header(packet_b, length + 4, secret_a, 1, 361):
                 return
 
-        # all's well; now decide whether to skip the ack step
-        if random.randint(0,1):
-            continue
+            payload_len, secret, step_num = parse_header(packet_b)
 
-        outgoing_packet = generate_header(4, secret_a, 1, 361)
-        outgoing_packet.extend(pack('!I', num_acked))
+
+            payload = packet_b[12:]
+            packet_id = unpack('!I', payload[0:4])[0]
+            if packet_id != num_acked: # packets must be received in order; wait for the next packet
+                continue
+
+
+
+            for byte in payload[4:length]:
+                if byte != '\0': # packet payload must be all zero bytes; if not, drop connection
+                    return
+
+            # all's well; now decide whether to skip the ack step
+            if random.randint(0,1):
+                continue
+
+            outgoing_packet = generate_header(4, secret_a, 1, 361)
+            outgoing_packet.extend(pack('!I', num_acked))
+            stage_b_socket.sendto(outgoing_packet, addr_b)
+            print 'packet ', num_acked, ' acked'
+            num_acked += 1
+
+        print 'past loop'
+        # got all the packets, now for step b2
+        tcp_port = random.randint(49152, 65535) # stick to the dynamic ports
+        secret_b = random.randint(1,1000)
+
+        outgoing_packet = generate_header(8, secret_a, 2, 361)
+        outgoing_packet.extend(pack('!II', tcp_port, secret_b))
         stage_b_socket.sendto(outgoing_packet, addr_b)
-        print 'packet ', num_acked, ' acked'
-        num_acked += 1
 
-    print 'past loop'
-    # got all the packets, now for step b2
-    tcp_port = random.randint(49152, 65535) # stick to the dynamic ports
-    secret_b = random.randint(1,1000)
+        '''
+        =============== STAGE C ================
+        '''
+        tcp_socket = socket(AF_INET, SOCK_STREAM)
+        tcp_socket.bind(('', tcp_port))
+        tcp_socket.listen(1)
+        stage_c_socket, addr_c = tcp_socket.accept()
+        stage_c_socket.settimeout(3)
+        print 'stage c connection established'
 
-    outgoing_packet = generate_header(8, secret_a, 2, 361)
-    outgoing_packet.extend(pack('!II', tcp_port, secret_b))
-    stage_b_socket.sendto(outgoing_packet, addr_b)
+        num2 = random.randint(1,20)
+        length2 = random.randint(1,20)
+        secret_c = random.randint(1,1000)
+        char_c = random.choice(string.ascii_letters)
 
-    '''
-    =============== STAGE C ================
-    '''
-    tcp_socket = socket(AF_INET, SOCK_STREAM)
-    tcp_socket.bind(('', tcp_port))
-    tcp_socket.listen(1)
-    stage_c_socket, addr_c = tcp_socket.accept()
-    print 'stage c connection established'
+        outgoing_packet = generate_header(13, secret_b, 2, 361)
+        outgoing_packet.extend(pack('!IIIc', num2, length2, secret_c, char_c))
+        while len(outgoing_packet) % 4: # pad
+            outgoing_packet.extend('\0')
 
-    num2 = random.randint(1,20)
-    length2 = random.randint(1,20)
-    secret_c = random.randint(1,1000)
-    char_c = random.choice(string.ascii_letters)
-
-    outgoing_packet = generate_header(13, secret_b, 2, 361)
-    outgoing_packet.extend(pack('!IIIc', num2, length2, secret_c, char_c))
-    while len(outgoing_packet) % 4: # pad
-        outgoing_packet.extend('\0')
-
-    stage_c_socket.send(outgoing_packet)
+        stage_c_socket.send(outgoing_packet)
 
 
-    '''
-    =============== STAGE D ================
-    '''
-    len_to_recv = 12 + length2
-    while len_to_recv % 4: # hacky way to compute the final padded length of the packets we're expecting
-        len_to_recv += 1
+        '''
+        =============== STAGE D ================
+        '''
+        len_to_recv = 12 + length2
+        while len_to_recv % 4: # hacky way to compute the final padded length of the packets we're expecting
+            len_to_recv += 1
 
-    for i in range(num2):
-        # get new packet and check header values
-        packet_d = receive_from_stream(stage_c_socket, len_to_recv)
-        if not verify_header(packet_d, length2, secret_c, 1, 361):
-            print 'header failed'
-            return
-
-        # check payload contents
-        payload_len, secret, step_num = parse_header(packet_d)
-        payload = packet_d[12:]
-        for byte in payload[:payload_len]:
-            if chr(byte) != char_c:
-                print 'payload failed: expected ', char_c, ' got ', chr(byte)
+        for i in range(num2):
+            # get new packet and check header values
+            packet_d = receive_from_stream(stage_c_socket, len_to_recv)
+            if not verify_header(packet_d, length2, secret_c, 1, 361):
+                print 'header failed'
                 return
 
+            # check payload contents
+            payload_len, secret, step_num = parse_header(packet_d)
+            payload = packet_d[12:]
+            for byte in payload[:payload_len]:
+                if chr(byte) != char_c:
+                    print 'payload failed: expected ', char_c, ' got ', chr(byte)
+                    return
 
-    print 'past loop'
-    # send final packet with secret D
-    secret_d = random.randint(1,1000)
-    outgoing_packet = generate_header(4, secret_c, 2, 361)
-    outgoing_packet.extend(pack('!I', secret_d))
-    stage_c_socket.send(outgoing_packet)
 
-    '''
-    =============== DONE ================
-    '''
+        print 'past loop'
+        # send final packet with secret D
+        secret_d = random.randint(1,1000)
+        outgoing_packet = generate_header(4, secret_c, 2, 361)
+        outgoing_packet.extend(pack('!I', secret_d))
+        stage_c_socket.send(outgoing_packet)
+
+        '''
+        =============== DONE ================
+        '''
+    except timeout:
+        print 'client failed to respond, disconnecting'
+        stage_b_socket.close()
+        tcp_socket.close()
+        stage_c_socket.close()
 
 
 
