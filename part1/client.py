@@ -2,9 +2,10 @@ from socket import *
 import random
 import struct
 from  struct import pack, unpack
+import sys
 
-IP = "attu2.cs.washington.edu"
-#IP = "127.0.0.1"
+#IP = "attu2.cs.washington.edu"
+IP = "127.0.0.1"
 
 # this also verifies the length and padding of the packet
 def verify_header(message, psecret, step, sid):
@@ -56,6 +57,22 @@ def receive_from_stream(sock, num_bytes):
     return received
 
 def main():
+    if len(sys.argv) == 1:
+        IP = "attu2.cs.washington.edu"
+    elif len(sys.argv) == 2:
+        arg1 = sys.argv[1]
+        if arg1.lowercase == "local":
+            IP = "127.0.0.1"
+        elif arg1.lowercase == "remote":
+            IP = "attu2.cs.washington.edu"
+        else:
+            print "unknown argument"
+            sys.exit(0)
+    else:
+        print "too many arguments"
+        sys.exit(0)
+
+
     sock = socket(AF_INET, SOCK_DGRAM)
     sock.bind(('', 12236))
     port = 12235
