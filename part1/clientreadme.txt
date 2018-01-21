@@ -4,7 +4,7 @@ sid:1539249
 Oliver Sheridan
 sid: 1437361
 Nolan Strait
-sid:
+sid: 1539982
 
 secrets:
 a: 68
@@ -13,6 +13,7 @@ c: 229
 d: 31
 
 how to run:
+while in the part1 folder
 to run on a local server, make sure server is running first:
 python client.py local
 
