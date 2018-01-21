@@ -13,9 +13,11 @@ c: 229
 d: 31
 
 how to run:
-to run on local server:
+to run on a local server, make sure server is running first:
 python client.py local
+
 to run on remote attu server:
 python client.py remote
+
 can also run on attu server with this:
 python client.py

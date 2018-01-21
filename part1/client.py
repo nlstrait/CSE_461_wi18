@@ -61,9 +61,9 @@ def main():
         IP = "attu2.cs.washington.edu"
     elif len(sys.argv) == 2:
         arg1 = sys.argv[1]
-        if arg1.lowercase == "local":
+        if arg1.lower() == "local":
             IP = "127.0.0.1"
-        elif arg1.lowercase == "remote":
+        elif arg1.lower() == "remote":
             IP = "attu2.cs.washington.edu"
         else:
             print "unknown argument"
