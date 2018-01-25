@@ -10,7 +10,7 @@ from pox.lib.addresses import IPAddr, IPAddr6, EthAddr
 log = core.getLogger()
 
 #statically allocate a routing table for hosts
-#MACs used in only in part 4
+#MACs used only in part 4
 IPS = {
   "h10" : ("10.0.1.10", '00:00:00:00:00:01'),
   "h20" : ("10.0.2.20", '00:00:00:00:00:02'),
@@ -47,25 +47,38 @@ class Part3Controller (object):
       exit(1)
 
   def s1_setup(self):
-    #put switch 1 rules here
-    pass
+	allow_all()
 
   def s2_setup(self):
-    #put switch 2 rules here
-    pass
+	allow_all()
 
   def s3_setup(self):
-    #put switch 3 rules here
-    pass
+	allow_all()
+
+  def allow_all(self):
+	fm = of.ofp_flow_mod()
+	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+	connection.send(fm)
 
   def cores21_setup(self):
-    #put core switch rules here
-    pass
+    # drop ICMP packets from hnotrust1
+	fm = of.ofp_flow_mod()
+	fm.match.dl_type = 0x0800
+	fm.match.nw_proto = 1
+	fm.match.nw_src = IPS['hnotrust1'][0]
+	connection.send(fm)
+
+	allow_all()
 
   def dcs31_setup(self):
-    #put datacenter switch rules here
-    pass
+    # drop IP packets from hnotrust1
+	fm = of.ofp_flow_mod()
+	fm.match.dl_type = 0x0800
+	fm.match.nw_src = IPS['hnotrust1'][0]
+	connection.send(fm)
 
+	allow_all()
+	
   #used in part 4 to handle individual ARP packets
   #not needed for part 3 (USE RULES!)
   #causes the switch to output packet_in on out_port
