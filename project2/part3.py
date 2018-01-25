@@ -7,6 +7,7 @@ from mininet.log import setLogLevel
 from mininet.cli import CLI
 from mininet.node import RemoteController
 
+
 class part3_topo(Topo):
   def build(self):
     #note the default route addition
@@ -19,26 +20,26 @@ class part3_topo(Topo):
     s3 = self.addSwitch('s3')
     cores21 = self.addSwitch('cores21')
     dcs31 = self.addSwitch('dcs31')
-    serv1 = self.addHost('serv1', mac='00:00:00:00:00:04',ip='10.0.4.10/24',defaultRoute='serv1-eth0')
-    hnotrust = self.addHost('hnotrust',mac='00:00:00:00:00:05',ip='172.16.10.100/24',defaultRoute='hnotrust-eth0')
+    serv1 = self.addHost('serv1', mac='00:00:00:00:00:04', ip='10.0.4.10/24', defaultRoute='serv1-eth0')
+    hnotrust = self.addHost('hnotrust', mac='00:00:00:00:00:05', ip='172.16.10.100/24', defaultRoute='hnotrust-eth0')
 
-    self.addLink(h10,s1)
+    self.addLink(h10, s1)
     self.addLink(h20, s2)
     self.addLink(h30, s3)
 
-    self.addLink(s1,cores21)
+    self.addLink(s1, cores21)
     self.addLink(s2, cores21)
     self.addLink(s3, cores21)
 
-    self.addLink(cores21,hnotrust)
-    self.addLink(cores21,dcs31)
-    self.addLink(dcs31,serv1)
+    self.addLink(cores21, hnotrust)
+    self.addLink(cores21, dcs31)
+    self.addLink(dcs31, serv1)
 
 topos = {'part3' : part3_topo}
 
 def configure():
   topo = part3_topo()
-  net = Mininet(topo=topo, controller=RemoteController)
+  net = Mininet(topo=topo, controller=Part3Controller)
   net.start()
   
   CLI(net)

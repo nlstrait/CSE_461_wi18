@@ -62,20 +62,20 @@ class Part3Controller (object):
 
   def cores21_setup(self):
     # drop ICMP packets from hnotrust1
-	fm = of.ofp_flow_mod()
-	fm.match.dl_type = 0x0800
-	fm.match.nw_proto = 1
-	fm.match.nw_src = IPS['hnotrust1'][0]
-	connection.send(fm)
+	#fm = of.ofp_flow_mod()
+	#fm.match.dl_type = 0x0800
+	#fm.match.nw_proto = 1
+	#fm.match.nw_src = IPS['hnotrust1'][0]
+	#connection.send(fm)
 
 	allow_all()
 
   def dcs31_setup(self):
     # drop IP packets from hnotrust1
-	fm = of.ofp_flow_mod()
-	fm.match.dl_type = 0x0800
-	fm.match.nw_src = IPS['hnotrust1'][0]
-	connection.send(fm)
+	#fm = of.ofp_flow_mod()
+	#fm.match.dl_type = 0x0800
+	#fm.match.nw_src = IPS['hnotrust1'][0]
+	#connection.send(fm)
 
 	allow_all()
 	
