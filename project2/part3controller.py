@@ -46,38 +46,40 @@ class Part3Controller (object):
       print ("UNKNOWN SWITCH")
       exit(1)
 
-  def s1_setup(self):
-	allow_all()
-
-  def s2_setup(self):
-	allow_all()
-
-  def s3_setup(self):
-	allow_all()
-
   def allow_all(self):
 	fm = of.ofp_flow_mod()
 	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-	connection.send(fm)
+	self.connection.send(fm)
 
+  def s1_setup(self):
+	fm = of.ofp_flow_mod()
+	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+	self.connection.send(fm)
+
+  def s2_setup(self):
+	fm = of.ofp_flow_mod()
+	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+	self.connection.send(fm)
+
+  def s3_setup(self):
+	fm = of.ofp_flow_mod()
+	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+	self.connection.send(fm)
+  
   def cores21_setup(self):
-    # drop ICMP packets from hnotrust1
-	#fm = of.ofp_flow_mod()
-	#fm.match.dl_type = 0x0800
-	#fm.match.nw_proto = 1
-	#fm.match.nw_src = IPS['hnotrust1'][0]
-	#connection.send(fm)
-
-	allow_all()
+    # drop ICMP packets from hnotrust
+	fm = of.ofp_flow_mod()
+	fm.match.dl_type = 0x0800
+	fm.match.nw_proto = 1
+	fm.match.nw_src = IPS['hnotrust'][0]
+	self.connection.send(fm)
 
   def dcs31_setup(self):
-    # drop IP packets from hnotrust1
-	#fm = of.ofp_flow_mod()
-	#fm.match.dl_type = 0x0800
-	#fm.match.nw_src = IPS['hnotrust1'][0]
-	#connection.send(fm)
-
-	allow_all()
+    # drop IP packets from hnotrust
+	fm = of.ofp_flow_mod()
+	fm.match.dl_type = 0x0800
+	fm.match.nw_src = IPS['hnotrust'][0]
+	self.connection.send(fm)
 	
   #used in part 4 to handle individual ARP packets
   #not needed for part 3 (USE RULES!)
