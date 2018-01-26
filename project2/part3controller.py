@@ -52,19 +52,13 @@ class Part3Controller (object):
 	self.connection.send(fm)
 
   def s1_setup(self):
-	fm = of.ofp_flow_mod()
-	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-	self.connection.send(fm)
+	self.allow_all()
 
   def s2_setup(self):
-	fm = of.ofp_flow_mod()
-	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-	self.connection.send(fm)
+	self.allow_all()
 
   def s3_setup(self):
-	fm = of.ofp_flow_mod()
-	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-	self.connection.send(fm)
+	self.allow_all()
   
   def cores21_setup(self):
     # drop ICMP packets from hnotrust
@@ -74,12 +68,16 @@ class Part3Controller (object):
 	fm.match.nw_src = IPS['hnotrust'][0]
 	self.connection.send(fm)
 
+	self.allow_all()
+
   def dcs31_setup(self):
     # drop IP packets from hnotrust
 	fm = of.ofp_flow_mod()
 	fm.match.dl_type = 0x0800
 	fm.match.nw_src = IPS['hnotrust'][0]
 	self.connection.send(fm)
+
+	self.allow_all()
 	
   #used in part 4 to handle individual ARP packets
   #not needed for part 3 (USE RULES!)
