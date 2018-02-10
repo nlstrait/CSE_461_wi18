@@ -12,8 +12,8 @@ class part3_topo(Topo):
     #note the default route addition
     #h10 = self.addHost('h10',mac='00:00:00:00:00:01',ip='10.0.1.10/24',defaultRoute='h10-eth0')
     h10 = self.addHost('h10', mac='00:00:00:00:00:01', ip='10.0.1.10/24', defaultRoute='h10-eth0')
-    h11 = self.addHost('h20', mac='00:00:00:00:00:02', ip='10.0.2.20/24', defaultRoute='h20-eth0')
-    h11 = self.addHost('h30', mac='00:00:00:00:00:03', ip='10.0.3.30/24', defaultRoute='h30-eth0')
+    h20 = self.addHost('h20', mac='00:00:00:00:00:02', ip='10.0.2.20/24', defaultRoute='h20-eth0')
+    h30 = self.addHost('h30', mac='00:00:00:00:00:03', ip='10.0.3.30/24', defaultRoute='h30-eth0')
     s1 = self.addSwitch('s1')
     s2 = self.addSwitch('s2')
     s3 = self.addSwitch('s3')
