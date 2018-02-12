@@ -108,6 +108,8 @@ class Part3Controller (object):
         ipv4_pac = event.parsed.find("ipv4")
         src_ip = ipv4_pac.srcip
         dst_ip = ipv4_pac.dstip
+	src_mac = packet.src
+        dst_mac = packet.dst
         fm = of.ofp_flow_mod()
         if IPPORT.contains(src_ip,dst_ip):
             #think this is wrong
