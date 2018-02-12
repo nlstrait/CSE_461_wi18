@@ -19,6 +19,8 @@ IPS = {
   "hnotrust" : ("172.16.10.100", '00:00:00:00:00:05'),
 }
 
+IPPORT{}
+
 class Part3Controller (object):
   """
   A Connection object for that switch is passed to the __init__ function.
@@ -99,9 +101,24 @@ class Part3Controller (object):
     if not packet.parsed:
       log.warning("Ignoring incomplete packet")
       return
-
-    packet_in = event.ofp # The actual ofp_packet_in message.
-    print ("Unhandled packet from " + str(self.connection.dpid) + ":" + packet.dump())
+    
+    if packet.type == ethernet.IP_TYPE:
+        inport = event.port
+        fm = of.ofp_flow_mod()
+        ipv4_pac = event.parsed.find("ipv4")
+        src_ip = ipv4_pac.srcip
+        dst_ip = ipv4_pac.dstip
+        fm = of.ofp_flow_mod()
+        if IPPORT.contains(src_ip,dst_ip):
+            #think this is wrong
+            fm.actions.append(of.ofp_action_output(port = IPPort.get(src_ip,dest_ip)))
+        else:
+            IPPort.add((src_ip,dest_ip),inport)
+            fm.actions
+             
+    else:
+        packet_in = event.ofp # The actual ofp_packet_in message.
+        print ("Unhandled packet from " + str(self.connection.dpid) + ":" + packet.dump())
 
 def launch ():
   """
