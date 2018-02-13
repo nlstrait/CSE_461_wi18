@@ -18,9 +18,17 @@ IPS = {
   "serv1" : ("10.0.4.10", '00:00:00:00:00:04'),
   "hnotrust" : ("172.16.10.100", '00:00:00:00:00:05'),
 }
+"""
+MACTOIP = {
+  '00:00:00:00:00:01' : "10.0.1.10",
+  '00:00:00:00:00:02' : "10.0.2.20",
+  '00:00:00:00:00:03' : "10.0.3.30",
+  '00:00:00:00:00:04' : "10.0.4.10",
+  '00:00:00:00:00:05' : "172.16.10.100",
+}
 
-IPPORT{}
-
+IPPort{}
+"""
 class Part3Controller (object):
   """
   A Connection object for that switch is passed to the __init__ function.
@@ -64,11 +72,42 @@ class Part3Controller (object):
   
   def cores21_setup(self):
     # drop ICMP packets from hnotrust
-	fm = of.ofp_flow_mod()
-	fm.match.dl_type = 0x0800
-	fm.match.nw_proto = 1
-	fm.match.nw_src = IPS['hnotrust'][0]
-	self.connection.send(fm)
+	#fm = of.ofp_flow_mod()
+	#fm.match.dl_type = 0x0800
+	#fm.match.nw_proto = 1
+	#fm.match.nw_src = IPS['hnotrust'][0]
+	#self.connection.send(fm)
+	
+        fmh10 = of.ofp_flow_mod()
+        fmh10.match.dl_type = 0x0800
+        fmh10.match.new_src = IPS['h10']
+        fmh10.actions.append(of.ofp_action_output(port = 1)
+        self.connection.send(fmh10)
+
+        fmh20 = of.ofp_flow_mod()
+        fmh20.match.dl_type = 0x0800
+        fmh20.match.new_src = IPS['h20']
+        fmh20.actions.append(of.ofp_action_output(port = 2)
+        self.connection.send(fmh20)
+
+        fmh30 = of.ofp_flow_mod()
+        fmh30.match.dl_type = 0x0800
+        fmh30.match.new_src = IPS['h30']
+        fmh30.actions.append(of.ofp_action_output(port = 3)
+        self.connection.send(fmh30)
+
+        fmhserv1 = of.ofp_flow_mod()
+        fmhserv1.match.dl_type = 0x0800
+        fmhserv1.match.new_src = IPS['serv1']
+        fmhserv1.actions.append(of.ofp_action_output(port = 5)
+        self.connection.send(fmhserv1)
+
+        fmhhnotrust = of.ofp_flow_mod()
+        fmhhnotrust.match.dl_type = 0x0800
+        fmhhnotrust.match.new_src = IPS['hnotrust']
+        #fmhhnotrust.actions.append(of.ofp_action_output(port = 4)
+        self.connection.send(fmhhnotrust)
+
 
 	self.allow_all()
 
@@ -101,26 +140,30 @@ class Part3Controller (object):
     if not packet.parsed:
       log.warning("Ignoring incomplete packet")
       return
-    
+"""    
     if packet.type == ethernet.IP_TYPE:
         inport = event.port
         fm = of.ofp_flow_mod()
         ipv4_pac = event.parsed.find("ipv4")
-        src_ip = ipv4_pac.srcip
-        dst_ip = ipv4_pac.dstip
-	src_mac = packet.src
-        dst_mac = packet.dst
+        origin_src_ip = ipv4_pac.srcip
+        origin_dst_ip = ipv4_pac.dstip
+	src_ip = MACTOIP.get(str(packet.src))
+        dst_ip = MACTOIP.get(str(packet.dst))
+	
         fm = of.ofp_flow_mod()
+        if dst_ip == origin_dst_ip:
+            pass
         if IPPORT.contains(src_ip,dst_ip):
-            #think this is wrong
-            fm.actions.append(of.ofp_action_output(port = IPPort.get(src_ip,dest_ip)))
+            #think this is right
+            fm.actions.append(of.ofp_action_output(port = IPPort.get(dst_ip, origin_dst_ip)))
         else:
-            IPPort.add((src_ip,dest_ip),inport)
-            fm.actions
-             
+            IPPort.add((src_ip,origin_dst_ip),inport)
+            #fm.actions.append(
+            fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD)) 
     else:
-        packet_in = event.ofp # The actual ofp_packet_in message.
-        print ("Unhandled packet from " + str(self.connection.dpid) + ":" + packet.dump())
+"""
+    packet_in = event.ofp # The actual ofp_packet_in message.
+    print ("Unhandled packet from " + str(self.connection.dpid) + ":" + packet.dump())
 
 def launch ():
   """

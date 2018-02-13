@@ -23,23 +23,24 @@ class part3_topo(Topo):
     serv1 = self.addHost('serv1', mac='00:00:00:00:00:04', ip='10.0.4.10/24', defaultRoute='h10-eth0')
     hnotrust = self.addHost('hnotrust', mac='00:00:00:00:00:05', ip='172.16.10.100/24', defaultRoute='h10-eth0')
 
-    self.addLink(h10, s1)
-    self.addLink(h20, s2)
-    self.addLink(h30, s3)
+    self.addLink(h10, s1,1,1)
+    self.addLink(h20, s2,1,1)
+    self.addLink(h30, s3,1,1)
 
-    self.addLink(s1, cores21)
-    self.addLink(s2, cores21)
-    self.addLink(s3, cores21)
+    self.addLink(s1, cores21,2,1)
+    self.addLink(s2, cores21,2,2)
+    self.addLink(s3, cores21,2,3)
 
-    self.addLink(cores21, hnotrust)
-    self.addLink(cores21, dcs31)
-    self.addLink(dcs31, serv1)
+    self.addLink(cores21, hnotrust,4,1)
+    self.addLink(cores21, dcs31,5,2)
+    self.addLink(dcs31, serv1,1,1)
 
 topos = {'part3' : part3_topo}
 
 def configure():
   topo = part3_topo()
   net = Mininet(topo=topo, controller=RemoteController)
+  #net = Mininet(topo=t)
   net.start()
   
   CLI(net)
