@@ -32,7 +32,7 @@ class part3_topo(Topo):
     self.addLink(s3, cores21,2,3)
 
     self.addLink(cores21, hnotrust,4,1)
-    self.addLink(cores21, dcs31,5,2)
+    self.addLink(cores21, dcs31,55,22)
     self.addLink(dcs31, serv1,1,1)
 
 topos = {'part3' : part3_topo}
