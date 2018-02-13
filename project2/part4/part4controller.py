@@ -1,4 +1,4 @@
-# Part 3 of UWCSE's Project 3
+# Part 4 of UWCSE's Project 3
 #
 # based on Lab Final from UCSC's Networking Class
 # which is based on of_tutorial by James McCauley
@@ -6,20 +6,23 @@
 from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import IPAddr, IPAddr6, EthAddr
+from pox.lib.packet.arp import arp
 
 log = core.getLogger()
+
 
 #statically allocate a routing table for hosts
 #MACs used only in part 4
 IPS = {
-  "h10" : ("10.0.1.10", '00:00:00:00:00:01'),
-  "h20" : ("10.0.2.20", '00:00:00:00:00:02'),
-  "h30" : ("10.0.3.30", '00:00:00:00:00:03'),
-  "serv1" : ("10.0.4.10", '00:00:00:00:00:04'),
-  "hnotrust" : ("172.16.10.100", '00:00:00:00:00:05'),
+  "h10" : ("10.0.1.10", '00:00:00:00:00:01', 1),
+  "h20" : ("10.0.2.20", '00:00:00:00:00:02', 2),
+  "h30" : ("10.0.3.30", '00:00:00:00:00:03', 3),
+  "hnotrust" : ("172.16.10.100", '00:00:00:00:00:05', 4),
+  "serv1" : ("10.0.4.10", '00:00:00:00:00:04', 5),
 }
 
-class Part3Controller (object):
+
+class Part4Controller (object):
   """
   A Connection object for that switch is passed to the __init__ function.
   """
@@ -46,10 +49,14 @@ class Part3Controller (object):
       print ("UNKNOWN SWITCH")
       exit(1)
 
+	#core.openflow.addListenerByName("PacketIn", self._handle_PacketIn)
+
+
   def allow_all(self):
 	fm = of.ofp_flow_mod()
 	fm.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
 	self.connection.send(fm)
+
 
   def s1_setup(self):
 	self.allow_all()
@@ -60,17 +67,54 @@ class Part3Controller (object):
   def s3_setup(self):
 	self.allow_all()
   
+
   def cores21_setup(self):
+
     # drop ICMP packets from hnotrust
+    fm = of.ofp_flow_mod()
+    fm.match.dl_type = 0x0800
+    fm.match.nw_proto = 1
+    fm.match.nw_src = IPS['hnotrust'][0]
+    self.connection.send(fm)
+    	
+    # --- direct IP packets --- #
+    self.setup_ip_flow_mod('h10')
+    self.setup_ip_flow_mod('h20')
+    self.setup_ip_flow_mod('h30')
+    self.setup_ip_flow_mod('hnotrust')
+    self.setup_ip_flow_mod('serv1')
+
+    # --- respond to ARPs --- #
+    self.setup_arp_flow_mod('h10')
+    self.setup_arp_flow_mod('h20')
+    self.setup_arp_flow_mod('h30')
+    self.setup_arp_flow_mod('hnotrust')
+    self.setup_arp_flow_mod('serv1')
+    
+    self.allow_all()
+
+
+  def setup_ip_flow_mod(self, dst):
+
 	fm = of.ofp_flow_mod()
 	fm.match.dl_type = 0x0800
-	fm.match.nw_proto = 1
-	fm.match.nw_src = IPS['hnotrust'][0]
+	fm.match.nw_dst = IPS[dst][0]
+	fm.actions.append(of.ofp_action_output(port=IPS[dst][2]))
 	self.connection.send(fm)
 
-	self.allow_all()
+
+  def setup_arp_flow_mod(self, dst):
+
+    fm = of.ofp_flow_mod()
+    fm.match.dl_type = 0x0806
+    fm.match.nw_dst = IPS[dst][0]
+    fm.actions.append(of.ofp_action_nw_addr.set_dst(IPS[dst][0]))
+    fm.actions.append(of.ofp_action_dl_addr.set_dst(IPS[dst][1]))
+    self.connection.send(fm)
+
 
   def dcs31_setup(self):
+
     # drop IP packets from hnotrust
 	fm = of.ofp_flow_mod()
 	fm.match.dl_type = 0x0800
@@ -78,16 +122,19 @@ class Part3Controller (object):
 	self.connection.send(fm)
 
 	self.allow_all()
+
 	
   #used in part 4 to handle individual ARP packets
   #not needed for part 3 (USE RULES!)
   #causes the switch to output packet_in on out_port
-  def resend_packet(self, packet_in, out_port):
-    msg = of.ofp_packet_out()
-    msg.data = packet_in
-    action = of.ofp_action_output(port = out_port)
-    msg.actions.append(action)
-    self.connection.send(msg)
+  #def resend_packet(self, packet_in, out_port):
+    #msg = of.ofp_packet_out()
+	#r = arp()
+	#r.opcode = arp.REPLY
+    #msg.data = packet_in
+    #action = of.ofp_action_output(port = out_port)
+    #msg.actions.append(action)
+    #self.connection.send(msg)
 
   def _handle_PacketIn (self, event):
     """
@@ -99,9 +146,10 @@ class Part3Controller (object):
     if not packet.parsed:
       log.warning("Ignoring incomplete packet")
       return
-
     packet_in = event.ofp # The actual ofp_packet_in message.
+	#resend_packet(packet_in, packet_in.in_port)
     print ("Unhandled packet from " + str(self.connection.dpid) + ":" + packet.dump())
+
 
 def launch ():
   """
@@ -109,5 +157,5 @@ def launch ():
   """
   def start_switch (event):
     log.debug("Controlling %s" % (event.connection,))
-    Part3Controller(event.connection)
+    Part4Controller(event.connection)
   core.openflow.addListenerByName("ConnectionUp", start_switch)
