@@ -71,44 +71,42 @@ class Part3Controller (object):
 	self.allow_all()
   
   def cores21_setup(self):
-        # drop ICMP packets from hnotrust
-	#fm = of.ofp_flow_mod()
-	#fm.match.dl_type = 0x0800
-	#fm.match.nw_proto = 1
-	#fm.match.nw_src = IPS['hnotrust'][0]
-	#self.connection.send(fm)
-	
-	        
-        fmh10 = of.ofp_flow_mod()
-        fmh10.match.dl_type = 0x0800
-        fmh10.match.nw_src = IPS['h10'][0]
-        fmh10.actions.append(of.ofp_action_output(port = 1))
-        self.connection.send(fmh10)
+	# drop ICMP packets from hnotrust
+	fm = of.ofp_flow_mod()
+	fm.match.dl_type = 0x0800
+	fm.match.nw_proto = 1
+	fm.match.nw_src = IPS['hnotrust'][0]
+	self.connection.send(fm)
+		
+	fmh10 = of.ofp_flow_mod()
+	fmh10.match.dl_type = 0x0800
+	fmh10.match.nw_dst = IPS['h10'][0]
+	fmh10.actions.append(of.ofp_action_output(port = 1))
+	self.connection.send(fmh10)
 
-        fmh20 = of.ofp_flow_mod()
-        fmh20.match.dl_type = 0x0800
-        fmh20.match.nw_src = IPS['h20'][0]
-        fmh20.actions.append(of.ofp_action_output(port = 2))
-        self.connection.send(fmh20)
+	fmh20 = of.ofp_flow_mod()
+	fmh20.match.dl_type = 0x0800
+	fmh20.match.nw_dst = IPS['h20'][0]
+	fmh20.actions.append(of.ofp_action_output(port = 2))
+	self.connection.send(fmh20)
 
-        fmh30 = of.ofp_flow_mod()
-        fmh30.match.dl_type = 0x0800
-        fmh30.match.nw_src = IPS['h30'][0]
-        fmh30.actions.append(of.ofp_action_output(port = 3))
-        self.connection.send(fmh30)
+	fmh30 = of.ofp_flow_mod()
+	fmh30.match.dl_type = 0x0800
+	fmh30.match.nw_dst = IPS['h30'][0]
+	fmh30.actions.append(of.ofp_action_output(port = 3))
+	self.connection.send(fmh30)
 
-        fmhserv1 = of.ofp_flow_mod()
-        fmhserv1.match.dl_type = 0x0800
-        fmhserv1.match.nw_src = IPS['serv1'][0]
-        fmhserv1.actions.append(of.ofp_action_output(port = 55))
-        self.connection.send(fmhserv1)
+	fmhserv1 = of.ofp_flow_mod()
+	fmhserv1.match.dl_type = 0x0800
+	fmhserv1.match.nw_dst = IPS['serv1'][0]
+	fmhserv1.actions.append(of.ofp_action_output(port = 55))
+	self.connection.send(fmhserv1)
 
-        fmhhnotrust = of.ofp_flow_mod()
-        fmhhnotrust.match.dl_type = 0x0800
-        fmhhnotrust.match.new_src = IPS['hnotrust'][0]
-        #fmhhnotrust.actions.append(of.ofp_action_output(port = 4))
-        self.connection.send(fmhhnotrust)
-	
+	fmhhnotrust = of.ofp_flow_mod()
+	fmhhnotrust.match.dl_type = 0x0800
+	fmhhnotrust.match.nw_dst = IPS['hnotrust'][0]
+	fmhhnotrust.actions.append(of.ofp_action_output(port = 4))
+	self.connection.send(fmhhnotrust)
 
 	self.allow_all()
 
@@ -143,6 +141,7 @@ class Part3Controller (object):
       return
     packet_in = event.ofp # The actual ofp_packet_in message.
     print ("Unhandled packet from " + str(self.connection.dpid) + ":" + packet.dump())
+
 
 def launch ():
   """
