@@ -7,6 +7,7 @@ from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import IPAddr, IPAddr6, EthAddr
 from pox.lib.packet.arp import arp
+from pox.lib.packet.ethernet import ethernet
 
 log = core.getLogger()
 
@@ -21,6 +22,14 @@ IPS = {
   "serv1" : ("10.0.4.10", '00:00:00:00:00:04', 5),
 }
 
+'''
+def ip_to_mac(ip):
+    for entry in IPS:
+        print "testing entry", entry
+        if IPS[entry][0] == ip:
+            return entry[3]
+    print "could not match ip", ip
+'''
 
 class Part4Controller (object):
   """
@@ -85,13 +94,15 @@ class Part4Controller (object):
     self.setup_ip_flow_mod('serv1')
 
     # --- respond to ARPs --- #
+    '''
     self.setup_arp_flow_mod('h10')
     self.setup_arp_flow_mod('h20')
     self.setup_arp_flow_mod('h30')
     self.setup_arp_flow_mod('hnotrust')
     self.setup_arp_flow_mod('serv1')
+    '''
     
-    self.allow_all()
+    #self.allow_all()
 
 
   def setup_ip_flow_mod(self, dst):
@@ -100,6 +111,7 @@ class Part4Controller (object):
 	fm.match.dl_type = 0x0800
 	fm.match.nw_dst = IPS[dst][0]
 	fm.actions.append(of.ofp_action_output(port=IPS[dst][2]))
+        fm.actions.append(of.ofp_action_dl_addr.set_dst(IPS[dst][1]))
 	self.connection.send(fm)
 
 
@@ -147,8 +159,29 @@ class Part4Controller (object):
       log.warning("Ignoring incomplete packet")
       return
     packet_in = event.ofp # The actual ofp_packet_in message.
-	#resend_packet(packet_in, packet_in.in_port)
-    print ("Unhandled packet from " + str(self.connection.dpid) + ":" + packet.dump())
+    
+    # this is incomplete and probably wrong; read at your own risk
+    print "handling packet", packet
+    match = of.ofp_match.from_packet(packet)
+    if ( match.dl_type == packet.ARP_TYPE and match.nw_proto == arp.REQUEST):
+        print "generating response"
+        reply = arp()
+        reply.opcode = arp.REPLY
+        reply.hwdst = match.dl_src
+        print "dl_dst", match.dl_dst
+        reply.protosrc = IPAddr("10.0.1.1")
+        reply.protodst = match.nw_src
+        #reply.hwsrc = ip_to_mac(match.nw_src)
+        e = ethernet(type=packet.ARP_TYPE, src=reply.hwsrc, dst=reply.hwdst)
+        e.set_payload(reply)
+        msg = of.ofp_packet_out()
+        msg.data = e.pack()
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_IN_PORT))
+        msg.in_port = event.port
+        event.connection.send(msg)
+    
+    #resend_packet(packet_in, packet_in.in_port)
+    #print ("Unhandled packet from " + str(self.connection.dpid) + ":" + packet.dump())
 
 
 def launch ():
