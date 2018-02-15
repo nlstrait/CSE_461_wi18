@@ -190,21 +190,33 @@ class Part4Controller (object):
     match = of.ofp_match.from_packet(packet)
     matchip = of.ofp_match.from_packet(packet)
     if ( packet.type == ethernet.IP_TYPE): #and matchip.dl_src == EthAddr("00:00:00:00:00:07")) :
-	r = ipv4()
-	r.hwsrc = EthAddr("00:00:00:00:00:07")
-	r.hwdst = EthAddr(IPREST[str(packet.payload.src)][0])
-	r.protosrc = IPROUTER[str(packet.payload.protodst)]
-	r.protodst = packet.payload.protodst
-	print "mac src", r.hwsrc
-	print "mac dst", r.hwdst
-	print "ip src", r.protosrc
-	print "ip dst", r.protodst
-	e = ethernet(type=packet.IP_TYPE, src=r.hwsrc,dst=r.hwdst)
-	e.set_payload(r)
+	#r = ipv4()
+	#r.hwsrc = EthAddr("00:00:00:00:00:07")
+	#r.hwdst = EthAddr(IPREST[str(packet.payload.dstip)][0])
+	#r.srcip = IPAddr(IPROUTER[str(packet.payload.dstip)])
+
+	#r.srcip = packet.payload.srcip
+	#r.dstip = packet.payload.dstip
+
+	#packet.src = EthAddr("00:00:00:00:00:07")
+	#packet.dst = EthAddr(IPREST[str(packet.payload.dstip)][0]))
+	#msg = of.ofp_packet_out()
+	#msg.data = packet
+	
+	#msg.actions.append(of.ofp_action_output(port = IPREST[str(packet.payload.dstip)][1]))
+	#self.connection.send(packet)
+	#print "mac src", r.hwsrc
+	#print "mac dst", r.hwdst
+	
+	#print "ip src", r.srcip
+	#print "ip dst", r.dstip
+	e = ethernet(type=packet.IP_TYPE, src=EthAddr("00:00:00:00:00:07"),dst=EthAddr(IPREST[str(packet.payload.dstip)][0]))
+	e.set_payload(packet.payload)
 	msg = of.ofp_packet_out()
 	msg.data = e.pack()
-	msg.actions.append(of.ofp_action_output(port = IPREST[str(packet.src)][1]))
-	self.connection.send(msg)
+	msg.actions.append(of.ofp_action_output(port = IPREST[str(packet.payload.dstip)][1]))
+	event.connection.send(msg)
+	
     elif ( match.dl_type == packet.ARP_TYPE and match.nw_proto == arp.REQUEST):
         print "generating response"
         reply = arp()
