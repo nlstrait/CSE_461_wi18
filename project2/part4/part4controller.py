@@ -185,7 +185,7 @@ class Part4Controller (object):
       return
     packet_in = event.ofp # The actual ofp_packet_in message.
     
-    # this is incomplete and probably wrong; read at your own risk
+    # handle ip and arp down here
     print "handling packet", packet
     match = of.ofp_match.from_packet(packet)
     matchip = of.ofp_match.from_packet(packet)
@@ -205,24 +205,25 @@ class Part4Controller (object):
 	
 	#msg.actions.append(of.ofp_action_output(port = IPREST[str(packet.payload.dstip)][1]))
 	#self.connection.send(packet)
-	#print "mac src", r.hwsrc
-	#print "mac dst", r.hwdst
-	
-	#print "ip src", r.srcip
-	#print "ip dst", r.dstip
+	print "mac src", EthAddr("00:00:00:00:00:07")
+	print "mac dst", EthAddr(IPREST[str(packet.payload.dstip)][0])
+	#packet.payload.srcip = IPAddr(IPROUTER[str(packet.payload.srcip)])	
+	print "ip src", packet.payload.srcip
+	print "ip dst", packet.payload.dstip
 	e = ethernet(type=packet.IP_TYPE, src=EthAddr("00:00:00:00:00:07"),dst=EthAddr(IPREST[str(packet.payload.dstip)][0]))
 	e.set_payload(packet.payload)
 	msg = of.ofp_packet_out()
 	msg.data = e.pack()
 	msg.actions.append(of.ofp_action_output(port = IPREST[str(packet.payload.dstip)][1]))
+	msg.in_port = event.port
 	event.connection.send(msg)
 	
     elif ( match.dl_type == packet.ARP_TYPE and match.nw_proto == arp.REQUEST):
-        print "generating response"
+     	#print "generating response"
         reply = arp()
         reply.opcode = arp.REPLY
         reply.hwdst = packet.src#match.dl_src
-        print "dl_dst", #match.dl_dst
+	print "dl_dst", #match.dl_dst
 	print "protosrc" , packet.payload.protosrc
    	print "ip router", IPROUTER[str(packet.payload.protosrc)]
 	reply.protosrc = IPAddr(IPROUTER[str(packet.payload.protosrc)])#IPAddr("10.0.1.1")
