@@ -61,7 +61,15 @@ def main():
     sock = socket(AF_INET, SOCK_STREAM)
     sock.connect(('127.0.0.1', 12235))
 
-    sock.send(b'GET http://www.washington.edu/ HTTP/1.0\r\n\r\n')
+    sock.send(b'GET http://www.washington.edu/ HTTP/1.1\r\nConnection: keep-alive\r\nHost: www.washington.edu\r\n\r\n')
+
+    response = ""
+    while True:
+        b = sock.recv(65535)
+        if not b:
+            break
+        response += b
+    print response
     
 
 
