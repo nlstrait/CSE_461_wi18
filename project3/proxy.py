@@ -105,6 +105,27 @@ def handle_thread(client_sock, address):
 
         server_sock.close()
         client_sock.close()
+
+    elif first_line[:7].lower() == 'connect':
+        #don't know if this would work
+        server_sock = socket(AF_INET, SOCK_STREAM)
+        server_sock.connect((host, port))
+
+        client_sock.send(b'HTTP/1.0 200 OK')
+        #sending to client then recieving from server and repeating until finished
+        while True:
+            bufc = client_sock.recv(65525)
+            if not bufc:
+                break
+            else:
+                server_sock.send(bufc)
+            bufs = server_sock.recv(65525)
+            if not bufs:
+                break
+            else:
+                client_sock.send(bufs)
+        server_sock.close()
+        client_sock.close()
     else:
         server_sock = socket(AF_INET, SOCK_STREAM)
         server_sock.connect((host, port))
@@ -113,6 +134,7 @@ def handle_thread(client_sock, address):
 
         server_sock.close()
         client_sock.close()
+
 
 
 def main():
