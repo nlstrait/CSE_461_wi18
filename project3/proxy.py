@@ -1,5 +1,6 @@
 from socket import *               # Import socket module
 import thread
+from multiprocessing import Process
 import os
 import random
 from  struct import *
@@ -114,21 +115,26 @@ def handle_thread(client_sock, address):
 
         client_sock.send(b'HTTP/1.0 200 OK')
         #sending to client then recieving from server and repeating until finished
+        cliToServProcess = Process(target=sendFromClientToServer, args=(client_sock,server_sock,))
+        cliToServProcess.start()
+
         while True:
-            clientToServer = os.fork()
-            if clientToServer == 0:
-                bufc = client_sock.recv(65525)
-                if not bufc:
-                    break
-                else:
-                    server_sock.send(bufc)
+            #clientToServer = os.fork()
+
+            #if clientToServer == 0:
+            #    bufc = client_sock.recv(65525)
+            #    if not bufc:
+            #        break
+            #    else:
+            #        server_sock.send(bufc)
+            #else:
+            bufs = server_sock.recv(65525)
+            if not bufs:
+                break
             else:
-                bufs = server_sock.recv(65525)
-                if not bufs:
-                    break
-                else:
-                    client_sock.send(bufs)
-        os.waitpid()
+                client_sock.send(bufs)
+        #os.waitpid()
+        cliToServProcess.join()
         server_sock.close()
         client_sock.close()
     else:
@@ -140,7 +146,13 @@ def handle_thread(client_sock, address):
         server_sock.close()
         client_sock.close()
 
-
+def sendFromClientToServer(client_sock, server_sock):
+    while True:
+        bufc = client_sock.recv(65525)
+        if not bufc:
+            return
+        else:
+            server_sock.send(bufc)
 
 def main():
     sock = socket(AF_INET, SOCK_STREAM)
