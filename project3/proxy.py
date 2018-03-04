@@ -1,5 +1,6 @@
 from socket import *               # Import socket module
 import thread
+import os
 import random
 from  struct import *
 import string # for the random character generation
@@ -114,16 +115,20 @@ def handle_thread(client_sock, address):
         client_sock.send(b'HTTP/1.0 200 OK')
         #sending to client then recieving from server and repeating until finished
         while True:
-            bufc = client_sock.recv(65525)
-            if not bufc:
-                break
+            clientToServer = os.fork()
+            if clientToServer == 0:
+                bufc = client_sock.recv(65525)
+                if not bufc:
+                    break
+                else:
+                    server_sock.send(bufc)
             else:
-                server_sock.send(bufc)
-            bufs = server_sock.recv(65525)
-            if not bufs:
-                break
-            else:
-                client_sock.send(bufs)
+                bufs = server_sock.recv(65525)
+                if not bufs:
+                    break
+                else:
+                    client_sock.send(bufs)
+        os.waitpid()
         server_sock.close()
         client_sock.close()
     else:
