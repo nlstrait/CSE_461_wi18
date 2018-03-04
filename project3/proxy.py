@@ -1,10 +1,8 @@
-from socket import *               # Import socket module
+import socket              # Import socket module
 import thread
-from multiprocessing import Process
-import os
-import random
-from  struct import *
-import string # for the random character generation
+from struct import *
+import errno
+import time
 
 # reliably pulls a given number of bytes from a stream socket
 def receive_from_stream(sock, num_bytes):
@@ -30,14 +28,9 @@ def parse_http_request(header):
 
 
     is_get_request = True
+    first_line = lines[0]
+    URI_and_proto = first_line.split(' ')[1]
     for line in lines:
-        if line[:3] == 'GET':
-            URI_and_proto = line[3:].strip()
-            first_line = line
-        if line[:7] == 'CONNECT':
-            URI_and_proto = line[7:].strip()
-            first_line = line
-            is_get_request = False
         if line[:5].lower() == 'host:':
             host = line[5:].strip()
 
@@ -45,22 +38,25 @@ def parse_http_request(header):
     # get first element of the line
     URI = URI_and_proto.split()[0]
 
-    URI_elements = URI.split(':')
+    URI_elements = URI.split('/')
+    if len(URI_elements) > 1:
+        URI_and_port = URI_elements[2].split(':') # to get just the host and port
+    else:
+        URI_and_port = URI_elements[0].split(':')
 
     # http or https
     protocol = URI_elements[0]
     host_elements = host.split(':')
 
     port = 0
-    if len(URI_elements) > 2:
-        port = int(URI_elements[-1].split('/')[0]) # the port might have stuff after it, so just take the port number
+    if len(URI_and_port) > 2:
+        port = int(URI_and_port[-1].split('/')[0]) # the port might have stuff after it, so just take the port number
     elif len(host_elements) > 1:
         port = int(host_elements[-1])
-    elif protocol == 'http':
+    elif protocol == 'http:':
         port = 80
     else:
         port = 443
-
 
     # build and return modified header
     return_header = ""
@@ -87,19 +83,26 @@ def handle_thread(client_sock, address):
 
     # we now have a complete HTTP request header
 
-
-    header, first_line, host, port = parse_http_request(input_buffer.decode("utf-8"))
+    try:
+        header, first_line, host, port = parse_http_request(input_buffer.decode("utf-8"))
+    except:
+        print "parse error"
+        print input_buffer.decode("utf-8")
+        raise
 
     print '>>>', first_line
 
     if first_line[:3].lower() == 'get':
-        server_sock = socket(AF_INET, SOCK_STREAM)
-        server_sock.connect((host, port))
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            server_sock.connect((host, port))
+        except:
+            print host, port
 
         server_sock.send(header)
 
         while True:
-            buf = server_sock.recv(65525)
+            buf = server_sock.recv(65536)
             if not buf:
                 break
             else:
@@ -109,53 +112,84 @@ def handle_thread(client_sock, address):
         client_sock.close()
 
     elif first_line[:7].lower() == 'connect':
-        #don't know if this would work
-        server_sock = socket(AF_INET, SOCK_STREAM)
-        server_sock.connect((host, port))
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            server_sock.connect((host, port))
+        except:
+            print host, port
+            raise
 
         client_sock.send(b'HTTP/1.0 200 OK')
-        #sending to client then recieving from server and repeating until finished
-        cliToServProcess = Process(target=sendFromClientToServer, args=(client_sock,server_sock,))
-        cliToServProcess.start()
+
+        server_sock.setblocking(False)
+        client_sock.setblocking(False)
+        
 
         while True:
-            #clientToServer = os.fork()
-
-            #if clientToServer == 0:
-            #    bufc = client_sock.recv(65525)
-            #    if not bufc:
-            #        break
-            #    else:
-            #        server_sock.send(bufc)
-            #else:
-            bufs = server_sock.recv(65525)
-            if not bufs:
+            try:
+                server_buf = server_sock.recv(65536)
+            except socket.error, e:
+                if e.args[0] != errno.EWOULDBLOCK:
+                    print e
+                    break
+            except e:
+                print e
                 break
             else:
-                client_sock.send(bufs)
-        #os.waitpid()
-        cliToServProcess.join()
+                print "got data from server"
+                if len(server_buf) == 0:
+                    break
+                else:
+                    client_sock.send(server_buf)
+
+
+            try:
+                client_buf = client_sock.recv(65536)
+            except socket.error, e:
+                if e.args[0] != errno.EWOULDBLOCK:
+                    print e
+                    break
+            except e:
+                print e
+                break
+            else:
+                if len(client_buf) == 0:
+                    break
+                else:
+                    server_sock.send(client_buf)
+
         server_sock.close()
         client_sock.close()
-    else:
-        server_sock = socket(AF_INET, SOCK_STREAM)
-        server_sock.connect((host, port))
+    else: # some other http request; just forward it
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            server_sock.connect((host, port))
+        except:
+            print host, port
 
-        client_sock.send(b'HTTP/1.0 200 OK')
+        server_sock.send(header)
+
+        while True:
+            buf = client_sock.recv(65536)
+            if not buf:
+                break
+            else:
+                server_sock.send(buf)
 
         server_sock.close()
         client_sock.close()
+
 
 def sendFromClientToServer(client_sock, server_sock):
     while True:
-        bufc = client_sock.recv(65525)
+        bufc = client_sock.recv(65536)
         if not bufc:
             return
         else:
             server_sock.send(bufc)
 
 def main():
-    sock = socket(AF_INET, SOCK_STREAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     port = 12235
     sock.bind(('', port))
     sock.listen(10) # queue up to 10 requests
