@@ -138,10 +138,10 @@ def handle_thread(client_sock, address):
             else:
                 print "got data from server"
                 if len(server_buf) == 0:
+                    print "left server"
                     break
                 else:
                     client_sock.send(server_buf)
-
 
             try:
                 client_buf = client_sock.recv(65536)
@@ -153,13 +153,16 @@ def handle_thread(client_sock, address):
                 print e
                 break
             else:
+                print "got data from client"
                 if len(client_buf) == 0:
+                    print "left client"
                     break
                 else:
                     server_sock.send(client_buf)
 
         server_sock.close()
         client_sock.close()
+        print "finished"
     else: # some other http request; just forward it
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
