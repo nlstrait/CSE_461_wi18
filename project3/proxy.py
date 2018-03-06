@@ -204,4 +204,4 @@ def main(port=12235):
 
 
 if __name__ == '__main__':
-    main(nt(sys.argv[1]))
+    main(int(sys.argv[1]))
