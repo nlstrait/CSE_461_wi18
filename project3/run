@@ -1,1 +1,3 @@
-python proxy.py
+#!/bin/bash
+
+python proxy.py $1
