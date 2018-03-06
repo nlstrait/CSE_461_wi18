@@ -2,6 +2,7 @@ import socket              # Import socket module
 import thread
 from struct import *
 import errno
+import sys
 import time
 
 # reliably pulls a given number of bytes from a stream socket
@@ -203,4 +204,4 @@ def main(port=12235):
 
 
 if __name__ == '__main__':
-    main()
+    main(int(sys.argv[1]))
