@@ -188,9 +188,9 @@ def sendFromClientToServer(client_sock, server_sock):
         else:
             server_sock.send(bufc)
 
-def main():
+def main(port=12235):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    port = 12235
+    #port = 12235
     sock.bind(('', port))
     sock.listen(10) # queue up to 10 requests
 
