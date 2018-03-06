@@ -139,7 +139,6 @@ def handle_thread(client_sock, address):
                 else:
                     server_sock.send(client_buf)
 
-
             try:
                 server_buf = server_sock.recv(65536)
             except socket.error, e:
