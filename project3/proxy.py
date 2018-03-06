@@ -116,10 +116,11 @@ def handle_thread(client_sock, address):
         try:
             server_sock.connect((host, port))
         except:
+            print "========================================================================"
             print host, port
             raise
 
-        client_sock.send(b'HTTP/1.0 200 OK')
+        client_sock.send(b'200 OK')
 
         server_sock.setblocking(False)
         client_sock.setblocking(False)
@@ -127,36 +128,29 @@ def handle_thread(client_sock, address):
 
         while True:
             try:
-                server_buf = server_sock.recv(65536)
-            except socket.error, e:
-                if e.args[0] != errno.EWOULDBLOCK:
-                    print e
-                    break
-            except e:
-                print e
-                break
-            else:
-                print "got data from server"
-                if len(server_buf) == 0:
-                    break
-                else:
-                    client_sock.send(server_buf)
-
-
-            try:
                 client_buf = client_sock.recv(65536)
             except socket.error, e:
                 if e.args[0] != errno.EWOULDBLOCK:
                     print e
                     break
-            except e:
-                print e
-                break
             else:
                 if len(client_buf) == 0:
                     break
                 else:
                     server_sock.send(client_buf)
+
+
+            try:
+                server_buf = server_sock.recv(65536)
+            except socket.error, e:
+                if e.args[0] != errno.EWOULDBLOCK:
+                    print e
+                    break
+            else:
+                if len(server_buf) == 0:
+                    break
+                else:
+                    client_sock.send(server_buf)
 
         server_sock.close()
         client_sock.close()
@@ -175,6 +169,13 @@ def handle_thread(client_sock, address):
                 break
             else:
                 server_sock.send(buf)
+
+        while True:
+            buf = server_sock.recv(65536)
+            if not buf:
+                break
+            else:
+                client_sock.send(buf)
 
         server_sock.close()
         client_sock.close()
